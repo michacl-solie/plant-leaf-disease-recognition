@@ -1,0 +1,6 @@
+# 默认忽略几乎所有 .idea 内容
+/shelf/
+/workspace.xml
+/httpRequests/
+/dataSources/
+/dataSources.local.xml

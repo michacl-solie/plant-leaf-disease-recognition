@@ -1,0 +1,101 @@
+# 植物叶片病害识别 - 实验配置文件
+# 基于改进SE-ResNet-50的PlantVillage数据集分类
+
+# ==================== 数据集配置 ====================
+dataset:
+  name: "PlantVillage"
+  data_dir: "./data/PlantVillage"
+  num_classes: 38
+  image_size: 224
+  mean: [0.485, 0.456, 0.406]   # ImageNet 标准均值
+  std: [0.229, 0.224, 0.225]    # ImageNet 标准标准差
+
+  # 数据划分比例: 训练:验证:测试 = 7:1.5:1.5
+  split:
+    train: 0.7
+    val: 0.15
+    test: 0.15
+
+  # 数据增强
+  augmentation:
+    random_horizontal_flip: true
+    random_vertical_flip: false
+    random_rotation: 15          # 随机旋转 ±15 度
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+
+# ==================== 模型配置 ====================
+model:
+  name: "se_resnet50"
+  pretrained: true              # 使用 ImageNet 预训练权重
+  se_reduction: 16              # SE模块缩减比率 (8/16/32)
+  dropout_rate: 0.5
+  num_classes: 38
+
+# ==================== 训练配置 ====================
+train:
+  batch_size: 32
+  epochs: 100
+  num_workers: 4
+
+  # 优化器 AdamW
+  optimizer:
+    name: "adamw"
+    lr: 0.0001                  # 初始学习率 1e-4
+    weight_decay: 0.0001        # 1e-4
+    betas: [0.9, 0.999]
+
+  # 学习率调度器 - 余弦退火
+  scheduler:
+    name: "cosine_annealing"
+    T_max: 100                  # 周期长度 = epochs
+    eta_min: 1.0e-6             # 最小学习率
+
+  # 损失函数
+  loss:
+    name: "cross_entropy"
+    label_smoothing: 0.1
+
+  # 早停策略
+  early_stopping:
+    patience: 15                # 验证集准确率连续15轮不提升则停止
+    min_delta: 0.001
+
+  # 混合精度训练
+  amp: true
+
+  # 梯度裁剪
+  max_grad_norm: 1.0
+
+# ==================== 评估配置 ====================
+eval:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1_score"
+    - "confusion_matrix"
+
+# ==================== 可视化配置 ====================
+visualization:
+  grad_cam: true                # 生成 Grad-CAM 热力图
+  confusion_matrix: true        # 生成混淆矩阵
+  loss_curve: true              # 绘制损失曲线
+  accuracy_curve: true          # 绘制准确率曲线
+  lr_curve: true                # 绘制学习率变化曲线
+
+# ==================== 路径配置 ====================
+paths:
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+  output_dir: "./outputs"
+  save_best: true               # 保存最佳模型
+  save_frequency: 10            # 每10个epoch保存一次
+
+# ==================== 设备配置 ====================
+device:
+  gpu_id: 0
+  use_cuda: true
