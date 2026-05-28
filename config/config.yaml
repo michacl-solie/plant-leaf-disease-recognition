@@ -62,7 +62,8 @@ train:
   # 早停策略
   early_stopping:
     patience: 15                # 验证集准确率连续15轮不提升则停止
-    min_delta: 0.001
+    min_delta: 0.001            # 最小提升阈值
+    min_epochs: 30              # 至少训练30轮，防止过早停止
 
   # 混合精度训练
   amp: true

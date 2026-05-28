@@ -65,16 +65,29 @@ class Trainer:
 
     def _setup_device(self) -> torch.device:
         """设置计算设备"""
-        if self.config["device"]["use_cuda"] and torch.cuda.is_available():
-            gpu_id = self.config["device"]["gpu_id"]
-            torch.cuda.set_device(gpu_id)
-            device = torch.device(f"cuda:{gpu_id}")
-            print(f"GPU: {torch.cuda.get_device_name(gpu_id)}")
-            print(f"CUDA 版本: {torch.version.cuda}")
-        else:
+        if not torch.cuda.is_available():
             device = torch.device("cpu")
-            print("使用 CPU 训练 (速度较慢)")
-        return device
+            print("=" * 60)
+            print("⚠ 警告: CUDA 不可用！将使用 CPU 训练")
+            print("   - 每 epoch 约 60-120 分钟")
+            print("   - 请安装 CUDA 版 PyTorch:")
+            print("     pip install torch torchvision -i https://pypi.tuna.tsinghua.edu.cn/simple")
+            print("=" * 60)
+            return device
+
+        gpu_id = self.config["device"]["gpu_id"]
+        props = torch.cuda.get_device_properties(gpu_id)
+        vram_gb = props.total_memory / 1024**3
+
+        print(f"GPU: {props.name} ({vram_gb:.1f} GB)")
+        print(f"CUDA: {torch.version.cuda} | 计算能力: {props.major}.{props.minor}")
+
+        # 4GB 显存告警
+        if vram_gb < 6:
+            print(f"⚠ 显存仅 {vram_gb:.1f}GB，如 OOM 请将 config.yaml 中 batch_size 改小 (如 16)")
+
+        torch.cuda.set_device(gpu_id)
+        return torch.device(f"cuda:{gpu_id}")
 
     def _build_model(self) -> nn.Module:
         """构建 SE-ResNet-50 模型"""
@@ -215,10 +228,11 @@ class Trainer:
 
         return {"loss": avg_loss, "accuracy": accuracy}
 
-    def _check_early_stopping(self, val_acc: float) -> bool:
+    def _check_early_stopping(self, val_acc: float, epoch: int) -> bool:
         """检查早停条件"""
         es_cfg = self.config["train"]["early_stopping"]
         min_delta = es_cfg.get("min_delta", 0.001)
+        min_epochs = es_cfg.get("min_epochs", 30)  # 至少训练30轮
 
         if val_acc > self.best_val_acc + min_delta:
             self.best_val_acc = val_acc
@@ -226,7 +240,15 @@ class Trainer:
             return False
         else:
             self.epochs_no_improve += 1
-            return self.epochs_no_improve >= es_cfg["patience"]
+
+        # 未达最低训练轮数，不触发早停
+        if epoch < min_epochs:
+            return False
+
+        should_stop = self.epochs_no_improve >= es_cfg["patience"]
+        if should_stop:
+            print(f"\n  ⏹ 早停触发! 连续 {es_cfg['patience']} 轮验证准确率未提升 (当前最佳: {self.best_val_acc:.4f})")
+        return should_stop
 
     def save_checkpoint(
         self, model: nn.Module, optimizer: optim.Optimizer,
@@ -347,8 +369,7 @@ class Trainer:
                 self.save_checkpoint(model, optimizer, scheduler, epoch)
 
             # 早停检查
-            if self._check_early_stopping(val_metrics["accuracy"]):
-                print(f"\n早停触发! 验证准确率在 {es_patience} 轮内未提升。")
+            if self._check_early_stopping(val_metrics["accuracy"], epoch):
                 break
 
         total_time = time.time() - start_time
