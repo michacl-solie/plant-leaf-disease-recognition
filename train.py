@@ -24,6 +24,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.cuda.amp import GradScaler, autocast
+from tqdm import tqdm
 
 from data.dataset import create_dataloaders
 from models.se_resnet import SEResNet50
@@ -132,9 +133,13 @@ class Trainer:
 
         use_amp = self.config["train"].get("amp", False)
 
-        for batch_idx, (images, labels) in enumerate(train_loader):
-            images = images.to(self.device)
-            labels = labels.to(self.device)
+        # tqdm 进度条
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch:3d}", unit="batch",
+                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}")
+
+        for images, labels in pbar:
+            images = images.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
 
             optimizer.zero_grad()
 
@@ -168,13 +173,13 @@ class Trainer:
             total_correct += (outputs.argmax(1) == labels).sum().item()
             total_samples += labels.size(0)
 
-            # 进度条输出
-            if batch_idx % 20 == 0:
-                current_lr = optimizer.param_groups[0]["lr"]
-                print(
-                    f"Epoch [{epoch:3d}] Batch [{batch_idx:4d}/{len(train_loader):4d}] "
-                    f"Loss: {loss.item():.4f} | LR: {current_lr:.2e}"
-                )
+            # 实时更新进度条
+            current_lr = optimizer.param_groups[0]["lr"]
+            pbar.set_postfix({
+                "loss": f"{loss.item():.4f}",
+                "acc": f"{total_correct/total_samples:.3f}",
+                "lr": f"{current_lr:.2e}",
+            })
 
         avg_loss = total_loss / total_samples
         accuracy = total_correct / total_samples
