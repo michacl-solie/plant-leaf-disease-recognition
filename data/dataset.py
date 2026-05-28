@@ -205,12 +205,15 @@ def create_dataloaders(
         test_dataset, test_subset.indices
     )
 
+    # 自动检测是否有 GPU
+    use_pin = torch.cuda.is_available()
+
     train_loader = DataLoader(
         train_subset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=use_pin,
         drop_last=True,
     )
 
@@ -219,7 +222,7 @@ def create_dataloaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=use_pin,
     )
 
     test_loader = DataLoader(
@@ -227,7 +230,7 @@ def create_dataloaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=True,
+        pin_memory=use_pin,
     )
 
     print(f"训练批次数: {len(train_loader)}")
