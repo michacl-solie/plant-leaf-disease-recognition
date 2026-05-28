@@ -45,15 +45,30 @@ plant-leaf-disease-recognition/
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 安装依赖（使用国内镜像源）
 
 ```bash
-pip install -r requirements.txt
+# 清华源 (推荐)
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+
+# 或阿里源
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+
+# 永久配置（一劳永逸）
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+> 详见 [INSTALL.md](./INSTALL.md)
 
 ### 2. 准备数据集
 
-下载 [PlantVillage 数据集](https://github.com/spMohanty/PlantVillage-Dataset)，解压到 `data/PlantVillage/` 目录：
+PlantVillage 是植物病害识别标准数据集（54,305 张, 38 类, 14 种作物, ~827MB）。
+
+**国内推荐下载**：阿里云天池直接下载 👉 [tianchi.aliyun.com/dataset/160100](https://tianchi.aliyun.com/dataset/160100)
+
+更多下载方式详见 [DATA.md](./DATA.md)。
+
+解压后目录结构：
 
 ```
 data/PlantVillage/
