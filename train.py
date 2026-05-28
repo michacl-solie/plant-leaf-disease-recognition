@@ -158,7 +158,7 @@ class Trainer:
 
             # 混合精度训练
             if use_amp:
-                with autocast():
+                with autocast(device_type=self.device.type):
                     outputs = model(images)
                     loss = loss_fn(outputs, labels)
                 scaler.scale(loss).backward()
